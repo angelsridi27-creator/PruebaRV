@@ -44,7 +44,7 @@
       <!-- SELECTOR DE DIVISIÓN -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">División:</label>
-        <select id="division" name="division" onchange="actualizarResponsables()" class="w-full px-3 py-2 border rounded-lg bg-white font-medium text-sm">
+        <select id="division" name="division" required onchange="actualizarResponsables()" class="w-full px-3 py-2 border rounded-lg bg-white font-medium text-sm">
           <option value="" disabled selected>-- Seleccionar División --</option>
           <option value="Cordoba">Córdoba</option>
           <option value="Reolin">Reolín</option>
@@ -131,7 +131,7 @@
     let cacheLineas = [];
     let cacheResponsables = {}; 
     let enviandoCola = false;
-    let lineaValidaSeleccionada = false; // Flag de validación
+    let lineaValidaSeleccionada = false;
 
     window.addEventListener("DOMContentLoaded", function() {
       if ('serviceWorker' in navigator) {
@@ -245,16 +245,15 @@
       }
     }
 
-    // 🔍 LÓGICA DE AUTOCOMPLETADO Y VALIDACIÓN DE LÍNEA
+    // 🔍 AUTOCOMPLETADO Y VALIDACIÓN OBLIGATORIA DE LÍNEA
     const inp = document.getElementById("linea");
     const sug = document.getElementById("listaSugerencias");
     const errLinea = document.getElementById("errorLinea");
 
     inp.addEventListener("input", function() {
       const v = this.value.toUpperCase(); sug.innerHTML = "";
-      lineaValidaSeleccionada = false; // Al escribir, se vuelve a validar
+      lineaValidaSeleccionada = false;
       
-      // Marcar visualmente como incompleto/inválido mientras escribe
       inp.classList.remove("border-emerald-500", "border-slate-200");
       inp.classList.add("border-amber-400");
       errLinea.classList.add("hidden");
@@ -270,13 +269,11 @@
         d.innerText = item;
         d.className = "p-3 cursor-pointer border-b hover:bg-slate-50 text-sm font-medium";
         
-        // Al hacer clic en un elemento de la lista desplegable
         d.addEventListener("click", function() { 
           inp.value = item; 
           lineaValidaSeleccionada = true; 
           sug.classList.add("hidden"); 
           
-          // Indicador visual verde de éxito
           inp.classList.remove("border-amber-400", "border-red-500");
           inp.classList.add("border-emerald-500");
           errLinea.classList.add("hidden");
@@ -285,7 +282,6 @@
       });
     });
 
-    // Validar si lo que quedó escrito coincide exactamente con algún valor de la lista (por si no hizo clic)
     inp.addEventListener("blur", function() {
       setTimeout(() => {
         const textoEscrito = inp.value.trim().toUpperCase();
@@ -303,16 +299,15 @@
             errLinea.classList.remove("hidden");
           }
         }
-      }, 200); // Pequeño retardo para permitir el clic en la lista
+      }, 200);
     });
 
     document.addEventListener("click", (e) => { if (e.target !== inp) sug.classList.add("hidden"); });
 
-    // SUBMIT CON VALIDACIÓN DE LÍNEA
+    // SUBMIT DEL FORMULARIO
     document.getElementById("formReclamo").addEventListener("submit", function(e) {
       e.preventDefault();
       
-      // Validar que la línea provenga de la lista
       const textoLinea = inp.value.trim().toUpperCase();
       const esValida = cacheLineas.some(l => l.toUpperCase() === textoLinea);
 
@@ -322,7 +317,7 @@
         inp.classList.add("border-red-500");
         errLinea.classList.remove("hidden");
         inp.focus();
-        return; // Detiene el envío
+        return; 
       }
 
       const fb = document.getElementById("feedback");
@@ -331,6 +326,7 @@
       const soloHora = ahora.toLocaleTimeString("es-AR");
 
       const datos = {
+        division: document.getElementById("division").value,
         operario: document.getElementById("operario").value,
         linea: document.getElementById("linea").value,
         piquete: document.getElementById("piquete").value,
@@ -419,6 +415,7 @@
       }
 
       let msg = `*EPEC RELEVAMIENTO 1.5*\n\n` +
+                `• *División:* ${d.division}\n` +
                 `• *Línea:* ${d.linea}\n` +
                 `• *Piquete:* ${d.piquete}\n` +
                 `• *Reclamo:* ${d.categoria} ${emojiPrioridad}\n` +
