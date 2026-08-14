@@ -128,7 +128,7 @@
       <input type="hidden" id="lat" name="lat" value="Sin GPS">
       <input type="hidden" id="lng" name="lng" value="Sin GPS">
 
-      <button type="submit" class="w-full bg-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow hover:bg-blue-900 transition-all">
+      <button type="submit" id="btnSubmit" class="w-full bg-blue-800 text-white font-bold py-3 px-4 rounded-lg shadow hover:bg-blue-900 transition-all">
         🚀 Registrar Piquete
       </button>
     </form>
@@ -314,10 +314,12 @@
 
     document.addEventListener("click", (e) => { if (e.target !== inp) sug.classList.add("hidden"); });
 
-    // SUBMIT DEL FORMULARIO
+    // SUBMIT DEL FORMULARIO CON PROTECCIÓN ANTI-DUPLICADOS
     document.getElementById("formReclamo").addEventListener("submit", function(e) {
       e.preventDefault();
       
+      const btnSubmit = document.getElementById("btnSubmit");
+
       const textoLinea = inp.value.trim().toUpperCase();
       const esValida = cacheLineas.some(l => l.toUpperCase() === textoLinea);
 
@@ -330,7 +332,12 @@
         return; 
       }
 
-      // ARMADO DEL CAMPO PIQUETE/VANO (UNIFICACIÓN DE RECUADROS DESDE Y HASTA)
+      // 🛑 BLOQUEO INMEDIATO DEL BOTÓN (Previene doble clic)
+      btnSubmit.disabled = true;
+      btnSubmit.innerText = "⏳ Procesando registro...";
+      btnSubmit.classList.add("opacity-50", "cursor-not-allowed");
+
+      // ARMADO DEL CAMPO PIQUETE/VANO
       const pDesde = document.getElementById("piqueteDesde").value.trim();
       const pHasta = document.getElementById("piqueteHasta").value.trim();
       let piqueteCompuesto = pDesde;
@@ -342,8 +349,14 @@
       const ahora = new Date();
       const soloFecha = ahora.toLocaleDateString("es-AR"); 
       const soloHora = ahora.toLocaleTimeString("es-AR");
+      
+      // 🔑 GENERACIÓN DE ID ÚNICO
+      const lineaLimpia = document.getElementById("linea").value.replace(/\s+/g, '');
+      const catLimpia = document.getElementById("categoria").value.replace(/\s+/g, '');
+      const idUnico = `${lineaLimpia}_${piqueteCompuesto}_${catLimpia}_${ahora.getTime()}`;
 
       const datos = {
+        idUnico: idUnico,
         division: document.getElementById("division").value,
         operario: document.getElementById("operario").value,
         linea: document.getElementById("linea").value,
@@ -380,14 +393,28 @@
       document.getElementById("categoria").value = "";
       document.getElementById("observacion").value = "";
       document.getElementsByName("prioridad").forEach(r => r.checked = false);
+
+      // ⏱️ DESBLOQUEO TEMPORIZADO (3 segundos)
+      setTimeout(() => {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = "🚀 Registrar Piquete";
+        btnSubmit.classList.remove("opacity-50", "cursor-not-allowed");
+      }, 3000);
     });
 
+    // 🛡️ ENCOLADO OFFLINE SIN DUPLICADOS
     function encolarOffline(datos) {
       const fb = document.getElementById("feedback");
       let cola = JSON.parse(localStorage.getItem("pwa_cola")) || [];
-      cola.push(datos);
-      localStorage.setItem("pwa_cola", JSON.stringify(cola));
       
+      // Validar si el ID único ya existe en la cola local
+      const yaExiste = cola.some(item => item.idUnico && item.idUnico === datos.idUnico);
+      
+      if (!yaExiste) {
+        cola.push(datos);
+        localStorage.setItem("pwa_cola", JSON.stringify(cola));
+      }
+
       actualizarContadorOffline();
 
       fb.className = "mt-3 p-3 rounded-lg text-xs text-center font-bold bg-blue-100 text-blue-900 block";
@@ -461,12 +488,12 @@
           p => {
             document.getElementById("lat").value = p.coords.latitude;
             document.getElementById("lng").value = p.coords.longitude;
-            alertaGpsBox.classList.add("hidden"); // Oculta aviso si captura coordenadas
+            alertaGpsBox.classList.add("hidden");
           },
           err => {
             document.getElementById("lat").value = "Sin GPS";
             document.getElementById("lng").value = "Sin GPS";
-            alertaGpsBox.classList.remove("hidden"); // Muestra aviso rojo de alerta GPS
+            alertaGpsBox.classList.remove("hidden");
           },
           { enableHighAccuracy: true, timeout: 10000 }
         );
